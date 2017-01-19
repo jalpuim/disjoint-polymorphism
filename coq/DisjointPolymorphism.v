@@ -34,12 +34,12 @@ Module MDisjointPolymorphism
 Module MExtended := MExtended(VarTyp)(set).
 Export MExtended.
 
-(* Lemma 2: Subtyping reflexivity *)
+(* Lemma 1: Subtyping reflexivity *)
 
 Lemma subyping_reflexivity : forall A, PType A -> Sub A A.
 Proof. intros; apply sound_sub; now apply usub_refl. Qed.
 
-(* Lemma 3: Subtyping transitivity *)
+(* Lemma 2: Subtyping transitivity *)
 
 Lemma subtyping_transitivity : forall B A C : PTyp, PType C -> Sub A B -> Sub B C -> Sub A C.
 Proof.
@@ -47,7 +47,7 @@ Proof.
   apply sound_sub; eapply usub_trans; eauto.
 Qed.
 
-(* Lemma 4: Covariance of disjointness *)
+(* Lemma 3: Covariance of disjointness *)
 
 Lemma covariance_disjointness :
   forall Gamma A B C, PType C -> Ortho Gamma A B -> Sub B C -> Ortho Gamma A C.
@@ -55,7 +55,7 @@ Proof.
   intros Gamma A B C HT HO HS; apply complete_sub in HS; eapply Ortho_usub_trans; eauto.
 Qed.
 
-(* Lemma 5: Disjointness is stable under substitution *)
+(* Lemma 4: Disjointness is stable under substitution *)
 
 Lemma disjointness_stable_substitution :
   forall a C Gamma D A B,
@@ -71,7 +71,7 @@ Lemma disjointness_stable_substitution :
     Ortho (subst_env Gamma a C) (subst_typ_source a C A) (subst_typ_source a C B).
 Proof. apply ortho_subst. Qed.
 
-(* Lemma 6: Types are stable under substitution *)
+(* Lemma 5: Types are stable under substitution *)
 
 Lemma types_stable_substitution :
   forall A a B Gamma C, not (In a (fv_ptyp B)) ->
@@ -83,13 +83,13 @@ Lemma types_stable_substitution :
                WFTyp (subst_env Gamma a B) (subst_typ_source a B A).
 Proof. apply subst_source_wf_typ. Qed.
 
-(* Lemma 7: Well-formed typing *)
+(* Lemma 6: Well-formed typing *)
 
 Lemma wellformed_typing :
   forall Gamma e A E dir, has_type_source_alg Gamma e dir A E -> WFTyp Gamma A.
 Proof. apply typing_wf_source_alg. Qed.  
 
-(* Lemma 8: Subtyping rules produce type-correct coercions *)
+(* Lemma 7: Subtyping rules produce type-correct coercions *)
 
 Lemma subtype_correct_coercions :
   forall Gamma A1 A2 E, sub A1 A2 E ->
@@ -99,7 +99,7 @@ Lemma subtype_correct_coercions :
                has_type_st (∥ Gamma ∥) E (STFun (|A1|) (|A2|)) .
 Proof. apply type_correct_coercions. Qed.
 
-(* Lemma 9: Unique subtyping contributor *)
+(* Lemma 8: Unique subtyping contributor *)
 
 Lemma unique_subtyping_contributor :
   forall Gamma A1 A2 B, WFTyp Gamma A1 ->
@@ -110,7 +110,7 @@ Lemma unique_subtyping_contributor :
                not (Sub A1 B /\ Sub A2 B).
 Proof. apply uniquesub. Qed.
 
-(* Lemma 10: Unique coercion *)
+(* Lemma 9: Unique coercion *)
 
 Lemma unique_coercion :
   forall A B E1 E2 Gamma, WFTyp Gamma A ->

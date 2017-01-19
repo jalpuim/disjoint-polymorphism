@@ -32,47 +32,6 @@ with the exceptions of "sound_sub" due to a technical limitation.
 
 *)
 
-
-Lemma ortho_ax_sym : forall A B, OrthoAx A B -> OrthoAx B A.
-Proof.
-  intros.
-  destruct H as [a [b c]].
-  unfold OrthoAx.
-  auto.
-Qed.
-  
-Lemma ortho_and_l : forall Gamma t1 t2 t0, Ortho Gamma (And t1 t2) t0 -> Ortho Gamma t1 t0.
-Proof.
-  intros.
-  dependent induction H; auto.
-  - inversion H1; subst.
-    apply OVarSym with (A := A); auto.
-    apply sound_sub in H0.
-    destruct H0.
-    inversion H0; subst.
-    apply complete_sub.
-    eexists; apply H7.
-    inversion H3.
-    inversion H3.
-  - orthoax_inv_l.
-Qed.
-
-Lemma ortho_and_r : forall Gamma t1 t2 t0, Ortho Gamma (And t1 t2) t0 -> Ortho Gamma t2 t0.
-Proof.
-  intros.
-  dependent induction H; auto.
-  - inversion H1; subst.
-    apply OVarSym with (A := A); auto.
-    apply sound_sub in H0.
-    destruct H0.
-    inversion H0; subst.
-    apply complete_sub.
-    eexists; apply H9.
-    inversion H3.
-    inversion H3.
-  - orthoax_inv_l.
-Qed.
-
 Lemma wfenv_no_refl : forall Gamma x, WFEnv Gamma -> not (List.In (x, TyDis (PFVarT x)) Gamma).
 Proof.
   intros.
@@ -291,6 +250,8 @@ Proof.
   auto.
 Qed.
 
+Hint Resolve ortho_and_l ortho_and_r Ortho_sym.
+
 Lemma ortho_no_sub :
   forall Gamma A B, WFTyp Gamma A -> WFTyp Gamma B -> Ortho Gamma A B -> ~ TopLike B -> not (Sub A B).
 Proof.
@@ -312,14 +273,9 @@ Proof.
     destruct Ha.
     apply IHsub1 with (Gamma := Gamma); auto.
     eexists; apply H.
-    apply Ortho_sym.
-    apply ortho_and_l with (t2 := t2); auto.
-    now apply Ortho_sym.
-    apply IHsub2 with (Gamma := Gamma); auto.
+    eauto.
+    apply IHsub2 with (Gamma := Gamma); eauto.
     eexists; apply H0.
-    apply Ortho_sym.
-    apply ortho_and_r with (t1 := t1); auto.
-    now apply Ortho_sym.    
   - inversion WFA; subst; apply IHsub with (Gamma := Gamma); auto.
     eexists; apply H.
     apply ortho_and_l with (t2 := t2); auto.
@@ -888,6 +844,10 @@ Proof.
     apply open_body_wf_type with (d := d); auto.
     unfold body_wf_typ; eauto.
   - now inversion IHhas_type_source_alg.
+  - apply_fresh WFForAll as x.
+    apply H1.
+    not_in_L x.
+    auto.
   - pick_fresh x.
     assert (Ha : not (M.In x L)) by (not_in_L x).
     apply WFFun.
@@ -897,10 +857,6 @@ Proof.
     eapply wf_strengthen_source with (z := x).
     not_in_L x.
     rewrite app_nil_l; apply Ha.
-  - apply_fresh WFForAll as x.
-    apply H1.
-    not_in_L x.
-    auto.
 Qed.
 
 Lemma type_correct_alg_terms : forall Gamma E ty e dir, has_type_source_alg Gamma E dir ty e -> PTerm E.
@@ -910,10 +866,10 @@ Proof.
   - apply PTerm_TApp.
     auto.
     now apply wf_gives_types_source in H.
-  - apply_fresh PTerm_Lam as x; auto.
-    apply H0; not_in_L x.
   - apply_fresh PTerm_TLam as x.
     apply H1; not_in_L x.
+  - apply_fresh PTerm_Lam as x; auto.
+    apply H0; not_in_L x.
 Qed.
 
 
@@ -922,16 +878,96 @@ Lemma typing_alg_wf_env :
 Proof.
   intros.
   induction H; auto.
-  - pick_fresh x;
-    assert (Ha: not (In x L)) by not_in_L x;
-    pose (H0 _ Ha) as HInv;
-    inversion HInv; auto.
   - pick_fresh x.
     assert (Ha : not (In x L)) by not_in_L x.
     apply H1 in Ha.
     now inversion Ha.
+  - pick_fresh x;
+    assert (Ha: not (In x L)) by not_in_L x;
+    pose (H0 _ Ha) as HInv;
+    inversion HInv; auto.
 Qed.
-  
+
+(* TODO move to infrastructure *)
+Lemma open_typ_app_eq_source : forall x E n F,
+  not (In x (fv_ptyp E)) ->
+  not (In x (fv_ptyp F)) ->
+  (open_rec_typ_source n (PFVarT x) E) = (open_rec_typ_source n (PFVarT x) F) ->
+  E = F.
+Proof.
+  intros x E.
+  induction E; intros n' F HNotE HNotF HEqOpen.
+  - simpl in *.
+    induction F; try (inversion HEqOpen; auto).
+    destruct (Nat.eqb n' n); auto.
+    inversion H0.
+  - simpl in *.
+    induction F; try (inversion HEqOpen; auto).
+    rewrite IHE1 with (F := F1) (n := n'); try not_in_L x.
+    rewrite IHE2 with (F := F2) (n := n'); try not_in_L x.
+    reflexivity.
+    simpl; rewrite union_spec; auto.
+    auto.
+    simpl; rewrite union_spec; auto.
+    auto.
+    destruct (Nat.eqb n' n); inversion H0.
+  - simpl in *.
+    induction F; try (inversion HEqOpen; auto).
+    rewrite IHE1 with (F := F1) (n := n'); try not_in_L x.
+    rewrite IHE2 with (F := F2) (n := n'); try not_in_L x.
+    reflexivity.
+    simpl; rewrite union_spec; auto.
+    auto.
+    simpl; rewrite union_spec; auto.
+    auto.
+    destruct (Nat.eqb n' n); inversion H0.
+  - induction F; simpl in *; try (now (destruct (Nat.eqb n' n); inversion HEqOpen)).
+    case_eq (Nat.eqb n' n); intros.
+    case_eq (Nat.eqb n' n0); intros.
+    apply f_equal.
+    apply beq_nat_true in H.
+    apply beq_nat_true in H0.
+    now subst.
+    rewrite H in HEqOpen.
+    rewrite H0 in HEqOpen.
+    inversion HEqOpen.
+    rewrite H in HEqOpen.
+    case_eq (Nat.eqb n' n0); intros;
+    rewrite H0 in HEqOpen; inversion HEqOpen.
+    reflexivity.
+    destruct (Nat.eqb n' n).
+    exfalso; apply HNotF.
+    apply MSetProperties.Dec.F.singleton_2; inversion HEqOpen; reflexivity. 
+    inversion HEqOpen.
+  - simpl in *.
+    induction F; try (inversion HEqOpen; auto).
+    destruct (Nat.eqb n' n).
+    inversion H0; subst.
+    exfalso; apply HNotE.
+    apply MSetProperties.Dec.F.singleton_2; inversion HEqOpen; reflexivity.
+    auto.
+  - simpl in *.
+    induction F; try (inversion HEqOpen; auto).
+    destruct (Nat.eqb n' n); inversion H0.
+    rewrite IHE1 with (F := F1) (n := n'); try not_in_L x.
+    rewrite IHE2 with (F := F2) (n := S n'); try not_in_L x.
+    reflexivity.
+    simpl; rewrite union_spec; auto.
+    auto.
+    simpl; rewrite union_spec; auto.
+    auto.
+  - simpl in *.
+    induction F; try (inversion HEqOpen; auto).
+    destruct (Nat.eqb n' n); auto.
+    inversion H0.
+  - simpl in *.
+    induction F; try (inversion HEqOpen; auto).
+    destruct (Nat.eqb n' n); inversion H0.
+    inversion HEqOpen; subst.
+    simpl in HNotF.
+    rewrite IHE with (F := F) (n := n'); try not_in_L x; auto.
+Qed.  
+
 (* Ignoring the generated expressions + smart constructors *)
 
 Definition has_ty Gamma e d t := exists E, has_type_source_alg Gamma e d t E.
@@ -982,6 +1018,17 @@ induction H; intros; unfold almost_unique; auto.
 - inversion H0; subst; apply IHhas_type_source_alg in H3; simpl in H3.
   now subst.
 - inversion H0; subst; apply IHhas_type_source_alg in H3; simpl in H3; now inversion H3.
+- inversion H2; subst.
+  pick_fresh x.
+  assert (Ha1 : ~ In x L) by not_in_L x.
+  assert (Ha2 : ~ In x L0) by not_in_L x.
+  apply H7 in Ha2.
+  apply H1 with (t2 := (open_typ_source A0 (PFVarT x)))
+                  (E2 := (open_typ_term E0 (STFVarT x))) in Ha1; auto.
+  unfold almost_unique in Ha1.
+  apply f_equal.
+  rewrite open_typ_app_eq_source with (E := A) (F := A0) (n := 0) (x := x); auto;
+  not_in_L x.
 Qed.
 
 (* Theorem 5. Type inference always gives unique types *)
@@ -1030,6 +1077,17 @@ induction H; intros.
 - inversion H0; subst; now apply IHhas_type_source_alg in H5.
 (* Case ProjR *)
 - inversion H0; subst; now apply IHhas_type_source_alg in H3.
+(* Case TLam *)
+- inversion H2; subst.
+  apply f_equal.
+  pick_fresh x.
+  apply open_typ_term_app_eq with (E := E) (F := E0) (x := x) (n := 0).
+  not_in_L x.
+  not_in_L x.
+  apply H1.
+  not_in_L x.
+  apply H8.
+  not_in_L x.
 (* Case Lam *)
 - inversion H2; subst.
   apply f_equal.
@@ -1056,19 +1114,6 @@ induction H; intros.
   assert (C = C0).
   apply (sub_coherent H3 H6 H0 H4).
   subst; reflexivity.
-  subst; inversion H.
-(* Case TLam *)
-- inversion H2; subst.
-  inversion H3.
-  apply f_equal.
-  pick_fresh x.
-  apply open_typ_term_app_eq with (E := E) (F := E0) (x := x) (n := 0).
-  not_in_L x.
-  not_in_L x.
-  apply H1.
-  not_in_L x.
-  apply H8.
-  not_in_L x.
 Qed.
 
 Hint Resolve coercions_produce_terms.
@@ -1449,6 +1494,14 @@ Proof.
     apply STTyTApp.
     now apply WFTyp_to_WFType.
     apply IHhas_type_source_alg.
+  (* ATyTLam *)
+  - simpl; apply_fresh STTyTLam as x.
+    simpl in *.
+    unfold open_typ.
+    change (STFVarT x) with (| PFVarT x |).
+    rewrite <- open_rec_typ_eq_source.
+    apply H1.
+    not_in_L x.
   (* TyLam *)
   - simpl.
     apply_fresh STTyLam as x.
@@ -1469,14 +1522,6 @@ Proof.
     now apply typing_wf_source_alg in H.
     assumption.
     assumption.
-  (* ATyTLam *)
-  - simpl; apply_fresh STTyTLam as x.
-    simpl in *.
-    unfold open_typ.
-    change (STFVarT x) with (| PFVarT x |).
-    rewrite <- open_rec_typ_eq_source.
-    apply H1.
-    not_in_L x.
 Qed.
   
 End MExtended.

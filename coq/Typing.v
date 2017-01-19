@@ -71,6 +71,15 @@ Inductive has_type_source_alg : context TyEnvSource -> PExp -> Dir -> PTyp -> (S
   | ATyProjR : forall Gamma l t A E,
                  has_type_source_alg Gamma t Inf (Rec l A) E ->
                  has_type_source_alg Gamma (PProjR t l) Inf A E
+  | ATyTLam : forall L Gamma t A d E,
+               WFTyp Gamma d ->
+               (forall x, not (In x L) -> 
+                     has_type_source_alg (extend x (TyDis d) Gamma)
+                                         (open_typ_term_source t (PFVarT x))
+                                         Inf
+                                         (open_typ_source A (PFVarT x))
+                                         (open_typ_term E (STFVarT x))) ->
+               has_type_source_alg Gamma (PTLam d t) Inf (ForAll d A) (STTLam _ E)
   (* Checking rules *)
   | ATyLam : forall L Gamma t A B E,
                (forall x, not (In x L) -> 
@@ -81,16 +90,7 @@ Inductive has_type_source_alg : context TyEnvSource -> PExp -> Dir -> PTyp -> (S
                has_type_source_alg Gamma t Inf A E ->
                sub A B C ->
                WFTyp Gamma B ->
-               has_type_source_alg Gamma t Chk B (STApp _ C E)
-  | ATyTLam : forall L Gamma t A d E,
-               WFTyp Gamma d ->
-               (forall x, not (In x L) -> 
-                     has_type_source_alg (extend x (TyDis d) Gamma)
-                                         (open_typ_term_source t (PFVarT x))
-                                         Chk
-                                         (open_typ_source A (PFVarT x))
-                                         (open_typ_term E (STFVarT x))) ->
-               has_type_source_alg Gamma (PTLam d t) Chk (ForAll d A) (STTLam _ E).
+               has_type_source_alg Gamma t Chk B (STApp _ C E).
 
 Hint Constructors has_type_source_alg.
 

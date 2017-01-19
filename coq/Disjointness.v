@@ -654,4 +654,102 @@ Proof.
     try now orthoax_inv_l H0.
 Qed.
 
+Lemma ortho_and_l : forall Gamma t1 t2 t0, Ortho Gamma (And t1 t2) t0 -> Ortho Gamma t1 t0.
+Proof.
+  intros.
+  dependent induction H; auto.
+  - inversion H1; subst.
+    apply OVarSym with (A := A); auto.
+    apply sound_sub in H0.
+    destruct H0.
+    inversion H0; subst.
+    apply complete_sub.
+    eexists; apply H7.
+    inversion H3.
+    inversion H3.
+  - orthoax_inv_l.
+Qed.
+
+Lemma ortho_and_r : forall Gamma t1 t2 t0, Ortho Gamma (And t1 t2) t0 -> Ortho Gamma t2 t0.
+Proof.
+  intros.
+  dependent induction H; auto.
+  - inversion H1; subst.
+    apply OVarSym with (A := A); auto.
+    apply sound_sub in H0.
+    destruct H0.
+    inversion H0; subst.
+    apply complete_sub.
+    eexists; apply H9.
+    inversion H3.
+    inversion H3.
+  - orthoax_inv_l.
+Qed.
+
+Lemma ortho_ax_sym : forall A B, OrthoAx A B -> OrthoAx B A.
+Proof.
+  intros.
+  destruct H as [a [b c]].
+  unfold OrthoAx.
+  auto.
+Qed.
+
+(*
+Lemma ortho_env_sym :
+  forall A B x d1 d2 E G,
+    WFEnv (E ++ extend x (TyDis (And d1 d2)) G) ->
+    Ortho (E ++ extend x (TyDis (And d1 d2)) G) A B -> Ortho (E ++ extend x (TyDis (And d2 d1)) G) A B.
+Proof.
+  intros.
+  remember (E ++ extend x (TyDis (And d1 d2)) G) as HEnv.
+  generalize dependent E.
+  dependent induction H0; intros; eauto.
+  - inversion H2; subst; apply_fresh OForAll as x; auto.
+    unfold extend in *; simpl in *.
+    change ((y, TyDis (And d0 d3)) :: E ++ (x, TyDis (And d2 d1)) :: G) with
+    (((y, TyDis (And d0 d3)) :: E) ++ (x, TyDis (And d2 d1)) :: G).
+    eapply H1; auto.
+    not_in_L y.
+    apply WFPushV; auto.
+    simpl; not_in_L y.
+    simpl; not_in_L y.
+    unfold not; intros; apply H17.
+    now apply MSetProperties.Dec.F.singleton_iff.
+  - subst.
+    destruct (VarTyp.eq_dec x x0).
+    + subst.
+      assert (A = And d1 d2).
+      eapply MapsTo_In_eq with (z := x0); eauto.
+      admit.
+      subst.
+      eapply OVar with (A := And d2 d1).
+      apply in_or_app; right; left; reflexivity.
+      admit.
+      auto.
+    + eapply OVar; eauto.
+      admit. (* through H *)
+  - admit. (* same as above *)
+Admitted.
+
+Lemma ortho_sym : forall Gamma A B, WFEnv Gamma -> Ortho Gamma A B -> Ortho Gamma B A.
+Proof.
+  intros.
+  induction H0; eauto.
+  - inversion H2; subst.
+    apply_fresh OForAll as x; auto.
+    change (extend x (TyDis (And d2 d1)) Gamma) with (nil ++ extend x (TyDis (And d2 d1)) Gamma).
+    apply ortho_env_sym; simpl.
+    apply WFPushV; auto; simpl; not_in_L x.
+    apply H1.
+    not_in_L x.
+    apply WFPushV; auto; simpl; not_in_L x.
+  - apply OAx; now apply ortho_ax_sym.
+Qed.
+
+Hint Resolve ortho_sym.
+ *)
+
+
+
+ 
 End MDisjointness.
